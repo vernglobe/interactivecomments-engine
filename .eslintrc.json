@@ -1,0 +1,73 @@
+{
+	"extends": ["airbnb-base", "plugin:prettier/recommended"],
+	"parser": "@typescript-eslint/parser",
+	"parserOptions": {
+			"ecmaVersion": "latest",
+			"sourceType": "module"
+	},
+	"settings": {
+		"import/resolver": {
+			"typescript": { "alwaysTryTypes": true}
+		}
+	},
+	"env": {
+			"es6": true,
+			"jest": true,
+			"node": true
+	},
+	"plugins": [
+			"@typescript-eslint",
+			"eslint-plugin-prettier"
+	],
+	"overrides": [
+			{
+			"files": ["**/*.spec.ts"],
+			"rules": {
+					"global-require": "off",
+					"no-param-reassign": "off"
+			}
+			},
+			{
+			"files": ["**/*.ts"],
+			"rules": {
+					"no-param-reassign": ["error", { "props": true, "ignorePropertyModificationsFor": ["draft"] }]
+			}
+		},
+			{
+			"files": ["src/infrastructure/cdk/**/*.ts"],
+			"rules": {
+					"no-new": "off"
+			}
+		},
+		{
+			"files": ["tasks/analyze.js", "tasksfile.js"],
+			"rules": {
+					"import/no-extraneous-dependencies": ["error", {"devDependencies": true}],
+					"no-console": "off",
+					"no-return-assign": "off",
+					"no-sequences": "off"
+			}
+		},
+		{
+			"files": ["src/packages/aws/src/index.ts"],
+			"rules": {
+					"no-param-reassign": "off",
+					"no-underscore-dangle": "off",
+					"no-throw-literal": "off",
+					"no-return-await": "off"
+			}
+		}
+	],
+	"rules": {
+		"import/extensions": [
+			 "error",
+			 "ignorePackages",
+			 {
+				 "js": "never",
+				 "jsx": "never",
+				 "ts": "never",
+				 "tsx": "never"
+			 }
+		]
+ }
+}

@@ -1,0 +1,9 @@
+/* Visit https://aka.ms/tsconfig to read more about this file */
+{
+  "extends": "../../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./dist/",                                   /* Specify an output folder for all emitted files. */
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", "__tests__", "dist", "coverage"]
+}
