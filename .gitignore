@@ -1,5 +1,6 @@
 *.d.ts
 node_modules
+dist
 coverage
 package-lock.json
 # CDK asset staging directory
