@@ -22,22 +22,18 @@ export default class DynamoTables extends Stack {
 
     const tablesProperties = [
       {
-        logicalId: "vernForeverProductTable",
+        logicalId: "vernForeverLivingTable",
         tableProps: {
-          tableName: `vernforever-${ENVIRONMENT}-product`,
+          tableName: `vernforever-${ENVIRONMENT}`,
           partitionKey: { name: "id", type: AttributeType.STRING },
-          sortKey: { name: "productDt", type: AttributeType.NUMBER },
           billingMode: BillingMode.PAY_PER_REQUEST,
         },
-      },
-      {
-        logicalId: "vernForeverMembershipTable",
-        tableProps: {
-          tableName: `vernforever-${ENVIRONMENT}-membership`,
-          partitionKey: { name: "id", type: AttributeType.STRING },
-          sortKey: { name: "registerDt", type: AttributeType.NUMBER },
-          billingMode: BillingMode.PAY_PER_REQUEST,
-        },
+        globalSecondaryIndexList: [
+          {
+            indexName: "categoryIndexName",
+            partitionKey: { name: "category", type: AttributeType.STRING },
+          },
+        ],
       },
     ];
     /*
@@ -80,9 +76,13 @@ export default class DynamoTables extends Stack {
       `arn:aws:sns:${this.region}:${this.account}:meme-${ACCOUNT}-sns-cloudWatchAlarm-topic`
     );
 */
-    tablesProperties.forEach(({ logicalId, tableProps }) => {
-      const table = new Table(this, logicalId, tableProps);
-      /*
+    tablesProperties.forEach(
+      ({ logicalId, tableProps, globalSecondaryIndexList = [] }) => {
+        const table = new Table(this, logicalId, tableProps);
+        globalSecondaryIndexList.forEach((index) => {
+          table.addGlobalSecondaryIndex(index);
+        });
+        /*
       // Create Read Alarm
       const readAnomolyDetectorProperties = {
         metricName: "ConsumedReadCapacityUnits",
@@ -192,6 +192,7 @@ export default class DynamoTables extends Stack {
       backupPlan.addSelection(`${table}-Selection`, {
         resources: [BackupResource.fromDynamoDbTable(table)]
       }); */
-    });
+      }
+    );
   }
 }

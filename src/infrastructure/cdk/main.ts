@@ -2,6 +2,7 @@
 import { App } from "aws-cdk-lib";
 import DynamoTables from "./lib/tables";
 import MembershipProcessor from "./lib/membership-processor";
+import TransactionProcessor from "./lib/transaction-processor";
 
 const app = new App();
 const { ENVIRONMENT = "stage" } = process.env;
@@ -12,7 +13,13 @@ const env = {
 
 new DynamoTables(app, `vernforever-${ENVIRONMENT}-dynamodb`, { ENVIRONMENT });
 
-new MembershipProcessor(
+const transactionProcessor = new TransactionProcessor(
+  app,
+  `vernforever-${ENVIRONMENT}-transaction-processor`,
+  { env, ENVIRONMENT }
+);
+
+const membershipProcessor = new MembershipProcessor(
   app,
   `vernforever-${ENVIRONMENT}-membership-processor`,
   {
@@ -20,5 +27,7 @@ new MembershipProcessor(
     ENVIRONMENT,
   }
 );
+
+membershipProcessor.addDependency(transactionProcessor);
 
 app.synth();

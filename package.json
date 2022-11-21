@@ -2,6 +2,8 @@
   "name": "vern-eforeverliving-engine",
   "private": true,
   "version": "0.1.0",
+  "license": "MIT",
+  "author": "vernglobe <vernglobe@gmail.com>",
   "scripts": {
     "build": "tsc",
     "lint": "eslint --fix ./src/**/*.ts",
@@ -71,6 +73,5 @@
         "lines": 70
       }
     }
-  },
-  "license": "MIT"
+  }
 }

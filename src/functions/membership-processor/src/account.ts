@@ -1,6 +1,8 @@
 class Account {
   id: string;
 
+  category: string;
+
   registerDt: number;
 
   updateDt: number;
@@ -30,7 +32,10 @@ class Account {
   file: any;
 
   constructor(account: any) {
-    this.id = `${account.icNumber}_${account.name}`;
+    this.id = account.id
+      ? account.id
+      : `${account.icNumber}_${account.name}_${account.city}`;
+    this.category = account.category ? account.category : "membership";
     this.registerDt = Date.now();
     this.updateDt = Date.now();
     this.name = account.name;

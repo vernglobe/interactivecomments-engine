@@ -11,10 +11,9 @@ import {
   Period,
 } from "aws-cdk-lib/aws-apigateway";
 import { Bucket } from "aws-cdk-lib/aws-s3";
-import { randomBytes } from "crypto";
 import Stack from "../shared/stack";
 
-export default class MembershipProcessor extends Stack {
+export default class TransactionProcessor extends Stack {
   constructor(scope: Construct, id: string, props: any) {
     super(scope, id, props);
 
@@ -22,7 +21,7 @@ export default class MembershipProcessor extends Stack {
     // const ACCOUNT = ENVIRONMENT === "prod" ? ENVIRONMENT : "preprod";
 
     const LambdaRole = new Role(this, "LambdaRole", {
-      roleName: `vernforever-${ENVIRONMENT}-membership-lambda-role`,
+      roleName: `vernforever-${ENVIRONMENT}-transaction-lambda-role`,
       assumedBy: new ServicePrincipal("lambda.amazonaws.com"),
     });
 
@@ -40,22 +39,22 @@ export default class MembershipProcessor extends Stack {
       })
     );
 
-    const bucket = new Bucket(this, `vernforever-${ENVIRONMENT}-membership`, {
-      bucketName: `vernforever-${ENVIRONMENT}-membership`,
+    const bucket = new Bucket(this, `vernforever-${ENVIRONMENT}-transaction`, {
+      bucketName: `vernforever-${ENVIRONMENT}-transaction`,
     });
 
-    const membershipProcessor = new Function(
+    const transactionProcessor = new Function(
       this,
-      "MembershipProcessorLambda",
+      "TransactionProcessorLambda",
       {
-        functionName: `vernforever-${ENVIRONMENT}-membership-processor`,
+        functionName: `vernforever-${ENVIRONMENT}-transaction-processor`,
         runtime: Runtime.NODEJS_16_X,
         tracing: Tracing.ACTIVE,
         handler: "index.handler",
         code: Code.fromAsset(
           path.join(
             path.resolve("./"),
-            "/src/functions/membership-processor/dist"
+            "/src/functions/transaction-processor/dist"
           )
         ),
         timeout: Duration.seconds(60),
@@ -68,11 +67,11 @@ export default class MembershipProcessor extends Stack {
       }
     );
 
-    bucket.grantReadWrite(membershipProcessor);
+    bucket.grantReadWrite(transactionProcessor);
 
-    const restApi = new RestApi(this, "vern-registration", {
-      restApiName: `vern-${ENVIRONMENT}-registration service`,
-      description: "New member registration",
+    const restApi = new RestApi(this, "vern-transaction", {
+      restApiName: `vern-${ENVIRONMENT}-transaction service`,
+      description: "New member transaction",
       // set up CORS
       /* defaultCorsPreflightOptions: {
         allowHeaders: ["Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"],
@@ -82,7 +81,7 @@ export default class MembershipProcessor extends Stack {
       } */
     });
 
-    const getLambdaIntegration = new LambdaIntegration(membershipProcessor, {
+    const getLambdaIntegration = new LambdaIntegration(transactionProcessor, {
       requestTemplates: { "application/json": '{"statusCode": "200"}' },
     });
 
@@ -104,72 +103,16 @@ export default class MembershipProcessor extends Stack {
       allowOrigins: ["http://localhost:3000"],
     });
 
-    const getMethod = v1.addMethod("GET", getLambdaIntegration, {
+    v1.addMethod("GET", getLambdaIntegration, {
       apiKeyRequired: true,
     });
-    const postMethod = v1.addMethod("POST", getLambdaIntegration, {
+    v1.addMethod("POST", getLambdaIntegration, {
       apiKeyRequired: true,
     });
-    const deleteMethod = v1.addMethod("DELETE", getLambdaIntegration, {
+    v1.addMethod("DELETE", getLambdaIntegration, {
       apiKeyRequired: true,
     });
 
-    const usagePlan = restApi.addUsagePlan("vernforever-living-usagePlan", {
-      name: `vernforever-${ENVIRONMENT}`,
-      throttle: {
-        rateLimit: 10,
-        burstLimit: 2,
-      },
-    });
-
-    // auto generated the key
-    // const apiKey = restApi.addApiKey("ApiKey");
-
-    // manually assign the key
-    const generateKeyPair = (size = 32, format = "base64") => {
-      const value = randomBytes(size);
-      return value.toString(format);
-    };
-    const apiKey = restApi.addApiKey("ApiKey", {
-      apiKeyName: `vernforever-${ENVIRONMENT}-apikey`,
-      value: generateKeyPair(),
-    });
-
-    usagePlan.addApiKey(apiKey);
-    usagePlan.addApiStage({
-      stage: restApi.deploymentStage,
-      throttle: [
-        {
-          method: getMethod,
-          throttle: {
-            rateLimit: 10,
-            burstLimit: 2,
-          },
-        },
-        {
-          method: postMethod,
-          throttle: {
-            rateLimit: 10,
-            burstLimit: 2,
-          },
-        },
-        {
-          method: deleteMethod,
-          throttle: {
-            rateLimit: 10,
-            burstLimit: 2,
-          },
-        },
-      ],
-    });
-    /*
-    const transactionApi = RestApi.fromRestApiId(
-      this,
-      "vern-transaction",
-      `vern-${ENVIRONMENT}-transaction service`
-    );
-    usagePlan.addApiStage({ api: transactionApi });
-*/
     // Rate Limited API Key
     new RateLimitedApiKey(this, "rate-limited-api-key", {
       customerId: `vernforever-${ENVIRONMENT}`,

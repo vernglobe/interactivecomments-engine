@@ -9,43 +9,40 @@ import Account from "./account";
 
 const logger = new Logger("vernforever-membership-procesor");
 const bucket = process.env.BUCKET;
-const membershipTbl = process.env.DYNAMODB_MEMBERSHIP_TABLE;
+const membershipTbl = process.env.DYNAMODB_EFOREVER_TABLE;
 const DYNAMODB_DOC_CLIENT = "DynamoDB.DocumentClient";
 
 const updateRegistrationData = async (reqParam: any): Promise<string> => {
   const reqParamJson = JSON.parse(reqParam);
-  const bucketName = bucket || "default-bucket-name";
-  const key = reqParamJson.name ? reqParamJson.name : "avenue2022.png";
-  const buf = Buffer.from(
-    reqParamJson.file.replace(/^data:image\/\w+;base64,/, ""),
-    "base64"
-  );
-  const type = reqParamJson.type ? reqParamJson.type : "image/png";
-  // const profile = JSON.parse(reqParamJson.profile);
-  // const account = new Account(profile);
-  // console.log({ account });
-
-  const item = new Account(reqParamJson.profile);
-  const respTbl = await aws(DYNAMODB_DOC_CLIENT, "put", {
-    TableName: membershipTbl,
-    Item: item,
-  });
-
-  logger.info({ respTbl });
-
-  const respS3 = await aws("S3", "putObject", {
-    Bucket: bucketName,
-    Key: key,
-    Body: buf,
-    ContentEncoding: "base64",
-    ContentType: type,
-  });
-  logger.info({ respS3 });
-
+  logger.info({ reqParamJson });
+  if (reqParamJson.type) {
+    const bucketName = bucket || "default-bucket-name";
+    const key = reqParamJson.name ? reqParamJson.name : "avenue2022.png";
+    const buf = Buffer.from(
+      reqParamJson.file.replace(/^data:image\/\w+;base64,/, ""),
+      "base64"
+    );
+    const type = reqParamJson.type ? reqParamJson.type : "image/png";
+    const respS3 = await aws("S3", "putObject", {
+      Bucket: bucketName,
+      Key: key,
+      Body: buf,
+      ContentEncoding: "base64",
+      ContentType: type,
+    });
+    logger.info({ respS3 });
+  } else {
+    const item = new Account(reqParamJson.profile);
+    const respTbl = await aws(DYNAMODB_DOC_CLIENT, "put", {
+      TableName: membershipTbl,
+      Item: item,
+    });
+    logger.info({ respTbl });
+  }
   return "Successfully store the file!";
 };
 
-const validateRequestParams = (body: any) => {
+const validateRequestParams = (body: any): any => {
   const requestBody = body ? JSON.parse(body) : null;
   const statusCode = 200;
   const response: any = {
@@ -58,16 +55,18 @@ const validateRequestParams = (body: any) => {
     response.body = "Profile cannot be empty!";
   }
 
-  // size is in byte. 1 kb = 1000 byte. 1mb = 1000kb
-  const size = requestBody.size ? requestBody.size : 0;
-  if (size <= 0) {
-    response.statusCode = 400;
-    response.body = "No file uploaded!";
-  }
+  if (requestBody.type) {
+    // size is in byte. 1 kb = 1000 byte. 1mb = 1000kb
+    const size = requestBody.size ? requestBody.size : 0;
+    if (size <= 0) {
+      response.statusCode = 400;
+      response.body = "No file uploaded!";
+    }
 
-  if (size >= 1000000) {
-    response.statusCode = 400;
-    response.body = "The file size must less than 1MB!";
+    if (size >= 1000000) {
+      response.statusCode = 400;
+      response.body = "The file size must less than 1MB!";
+    }
   }
 
   const profile = requestBody.profile ? requestBody.profile : "";
