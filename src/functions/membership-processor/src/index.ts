@@ -88,7 +88,14 @@ exports.handler = async (
   // logger.info(`Context: ${JSON.stringify(context, null, 2)}`);
   let { body } = event;
   let statusCode = 200;
-  const headers = { ContentType: "application/json" };
+  const headers = {
+    ContentType: "application/json",
+    "X-Requested-With": "*",
+    "Access-Control-Allow-Headers":
+      "Content-Type,X-Amz-Date,Authorization,X-Api-Key,x-requested-with",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "POST,GET,OPTIONS",
+  };
 
   const validateReq = validateRequestParams(body);
   if (validateReq.statusCode !== 200) {

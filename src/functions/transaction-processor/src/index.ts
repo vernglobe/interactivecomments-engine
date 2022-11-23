@@ -8,6 +8,15 @@ const logger = new Logger("transaction-processor");
 const vernforeverTbl = process.env.DYNAMODB_EFOREVER_TABLE;
 const DYNAMODB_DOC_CLIENT = "DynamoDB.DocumentClient";
 
+const formatProductList = (rawProducts: any): any => {
+  const { Items, Count } = rawProducts;
+  if (Count <= 0) {
+    return "Content empty.";
+  }
+
+  return Items;
+};
+
 const getProductsByCategory = async (params: any): Promise<string> => {
   const productlist = await aws(DYNAMODB_DOC_CLIENT, "query", {
     TableName: vernforeverTbl,
@@ -19,7 +28,7 @@ const getProductsByCategory = async (params: any): Promise<string> => {
     Limit: 1000,
   });
 
-  return productlist;
+  return formatProductList(productlist);
 };
 
 const validateRequestParams = (event: APIGatewayEvent): any => {
@@ -58,7 +67,14 @@ exports.handler = async (
   // logger.info({ context });
   let statusCode = 200;
   let { body } = event;
-  const headers = { ContentType: "application/json" };
+  const headers = {
+    ContentType: "application/json",
+    "X-Requested-With": "*",
+    "Access-Control-Allow-Headers":
+      "Content-Type,X-Amz-Date,Authorization,X-Api-Key,x-requested-with",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "POST,GET,OPTIONS",
+  };
 
   const validateReq = validateRequestParams(event);
   if (validateReq.statusCode !== 200) {
