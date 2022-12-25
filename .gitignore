@@ -2,7 +2,9 @@
 node_modules
 dist
 coverage
-package-lock.json
 # CDK asset staging directory
 .cdk.staging
 cdk.out
+dist/infrastructure/cdk/main.js
+dist/infrastructure/cdk/lib/members-processor.js
+dist/infrastructure/cdk/lib/tables.js

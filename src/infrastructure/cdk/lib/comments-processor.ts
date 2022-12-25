@@ -10,11 +10,9 @@ import {
   RateLimitedApiKey,
   Period,
 } from "aws-cdk-lib/aws-apigateway";
-import { Bucket } from "aws-cdk-lib/aws-s3";
-import { randomBytes } from "crypto";
 import Stack from "../shared/stack";
 
-export default class MembershipProcessor extends Stack {
+export default class CommentsProcessor extends Stack {
   constructor(scope: Construct, id: string, props: any) {
     super(scope, id, props);
 
@@ -22,7 +20,7 @@ export default class MembershipProcessor extends Stack {
     // const ACCOUNT = ENVIRONMENT === "prod" ? ENVIRONMENT : "preprod";
 
     const LambdaRole = new Role(this, "LambdaRole", {
-      roleName: `vernforever-${ENVIRONMENT}-membership-lambda-role`,
+      roleName: `interactivecomments-${ENVIRONMENT}-lambda-role`,
       assumedBy: new ServicePrincipal("lambda.amazonaws.com"),
     });
 
@@ -40,39 +38,25 @@ export default class MembershipProcessor extends Stack {
       })
     );
 
-    const bucket = new Bucket(this, `vernforever-${ENVIRONMENT}-membership`, {
-      bucketName: `vernforever-${ENVIRONMENT}-membership`,
+    const commentsProcessor = new Function(this, "CommentsProcessorLambda", {
+      functionName: `interactivecomments-${ENVIRONMENT}-comments-processor`,
+      runtime: Runtime.NODEJS_16_X,
+      tracing: Tracing.ACTIVE,
+      handler: "index.handler",
+      code: Code.fromAsset(
+        path.join(path.resolve("./"), "/src/functions/comments-processor/dist")
+      ),
+      timeout: Duration.seconds(60),
+      role: LambdaRole,
+      environment: {
+        DYNAMODB_COMMENTS_TABLE: `interactivecomments-${ENVIRONMENT}`,
+      },
+      memorySize: 128,
     });
 
-    const membershipProcessor = new Function(
-      this,
-      "MembershipProcessorLambda",
-      {
-        functionName: `vernforever-${ENVIRONMENT}-membership-processor`,
-        runtime: Runtime.NODEJS_16_X,
-        tracing: Tracing.ACTIVE,
-        handler: "index.handler",
-        code: Code.fromAsset(
-          path.join(
-            path.resolve("./"),
-            "/src/functions/membership-processor/dist"
-          )
-        ),
-        timeout: Duration.seconds(60),
-        role: LambdaRole,
-        environment: {
-          DYNAMODB_EFOREVER_TABLE: `vernforever-${ENVIRONMENT}`,
-          BUCKET: bucket.bucketName,
-        },
-        memorySize: 128,
-      }
-    );
-
-    bucket.grantReadWrite(membershipProcessor);
-
-    const restApi = new RestApi(this, "vern-registration", {
-      restApiName: `vern-${ENVIRONMENT}-registration service`,
-      description: "New member registration",
+    const restApi = new RestApi(this, "interactivecomments", {
+      restApiName: `interactivecomments-${ENVIRONMENT}`,
+      description: "Create, read, update and delete comment",
       // set up CORS
       /* defaultCorsPreflightOptions: {
         allowHeaders: ["Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"],
@@ -82,12 +66,12 @@ export default class MembershipProcessor extends Stack {
       } */
     });
 
-    const getLambdaIntegration = new LambdaIntegration(membershipProcessor, {
+    const getLambdaIntegration = new LambdaIntegration(commentsProcessor, {
       requestTemplates: { "application/json": '{"statusCode": "200"}' },
     });
 
-    const v1 = restApi.root.addResource("v1");
-    v1.addCorsPreflight({
+    const comments = restApi.root.addResource("comments");
+    comments.addCorsPreflight({
       allowHeaders: [
         "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
       ],
@@ -104,18 +88,28 @@ export default class MembershipProcessor extends Stack {
       allowOrigins: ["http://localhost:3000"],
     });
 
-    const getMethod = v1.addMethod("GET", getLambdaIntegration, {
-      apiKeyRequired: true,
-    });
-    const postMethod = v1.addMethod("POST", getLambdaIntegration, {
-      apiKeyRequired: true,
-    });
-    const deleteMethod = v1.addMethod("DELETE", getLambdaIntegration, {
+    const userComment = comments.addResource("{user_id}");
+    // GET /comments
+    const getAllComments = userComment.addMethod("GET", getLambdaIntegration, {
       apiKeyRequired: true,
     });
 
-    const usagePlan = restApi.addUsagePlan("vernforever-living-usagePlan", {
-      name: `vernforever-${ENVIRONMENT}`,
+    // GET /comments/{comment_id}
+    // DELETE /comments/{comment_id}
+    // POST /comments/{comment_id}
+    const commentId = userComment.addResource("{comment_id}");
+    const getComment = commentId.addMethod("GET", getLambdaIntegration, {
+      apiKeyRequired: true,
+    });
+    const deleteComment = commentId.addMethod("DELETE", getLambdaIntegration, {
+      apiKeyRequired: true,
+    });
+    const updateComment = commentId.addMethod("POST", getLambdaIntegration, {
+      apiKeyRequired: true,
+    });
+
+    const usagePlan = restApi.addUsagePlan("interactivecomments-usagePlan", {
+      name: `interactivecomments-${ENVIRONMENT}`,
       throttle: {
         rateLimit: 10,
         burstLimit: 2,
@@ -123,56 +117,45 @@ export default class MembershipProcessor extends Stack {
     });
 
     // auto generated the key
-    // const apiKey = restApi.addApiKey("ApiKey");
-
-    // manually assign the key
-    const generateKeyPair = (size = 32, format = "base64") => {
-      const value = randomBytes(size);
-      return value.toString(format);
-    };
-    const apiKey = restApi.addApiKey("ApiKey", {
-      apiKeyName: `vernforever-${ENVIRONMENT}-apikey`,
-      value: generateKeyPair(),
-    });
-
+    const apiKey = restApi.addApiKey("ApiKey");
     usagePlan.addApiKey(apiKey);
     usagePlan.addApiStage({
       stage: restApi.deploymentStage,
       throttle: [
         {
-          method: getMethod,
+          method: getAllComments,
           throttle: {
-            rateLimit: 10,
+            rateLimit: 100,
             burstLimit: 2,
           },
         },
         {
-          method: postMethod,
+          method: getComment,
           throttle: {
-            rateLimit: 10,
+            rateLimit: 100,
             burstLimit: 2,
           },
         },
         {
-          method: deleteMethod,
+          method: deleteComment,
           throttle: {
-            rateLimit: 10,
+            rateLimit: 100,
+            burstLimit: 2,
+          },
+        },
+        {
+          method: updateComment,
+          throttle: {
+            rateLimit: 100,
             burstLimit: 2,
           },
         },
       ],
     });
-    /*
-    const transactionApi = RestApi.fromRestApiId(
-      this,
-      "vern-transaction",
-      `vern-${ENVIRONMENT}-transaction service`
-    );
-    usagePlan.addApiStage({ api: transactionApi });
-*/
+
     // Rate Limited API Key
     new RateLimitedApiKey(this, "rate-limited-api-key", {
-      customerId: `vernforever-${ENVIRONMENT}`,
+      customerId: `interactivecomments-${ENVIRONMENT}`,
       resources: [restApi],
       quota: {
         limit: 1000,

@@ -1,5 +1,5 @@
 {
-  "name": "vern-eforeverliving-engine",
+  "name": "interactivecomments-engine",
   "private": true,
   "version": "0.1.0",
   "license": "MIT",
@@ -38,7 +38,7 @@
   "dependencies": {
     "aws-cdk-lib": "^2.50.0",
     "aws-sdk": "^2.1253.0",
-    "constructs": "^10.1.158",
+    "constructs": "^10.1.199",
     "deepmerge": "^4.2.2",
     "source-map-support": "^0.5.21"
   },
@@ -63,11 +63,6 @@
     ],
     "coverageThreshold": {
       "./src/functions/**": {
-        "branches": 70,
-        "functions": 70,
-        "lines": 70
-      },
-      "./src/packages/**": {
         "branches": 70,
         "functions": 70,
         "lines": 70

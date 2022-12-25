@@ -1,8 +1,7 @@
 /* eslint-disable no-new */
 import { App } from "aws-cdk-lib";
 import DynamoTables from "./lib/tables";
-import MembershipProcessor from "./lib/membership-processor";
-import TransactionProcessor from "./lib/transaction-processor";
+import CommentsProcessor from "./lib/comments-processor";
 
 const app = new App();
 const { ENVIRONMENT = "stage" } = process.env;
@@ -11,23 +10,17 @@ const env = {
   region: process.env.CDK_DEFAULT_REGION,
 };
 
-new DynamoTables(app, `vernforever-${ENVIRONMENT}-dynamodb`, { ENVIRONMENT });
+new DynamoTables(app, `interactivecomments-${ENVIRONMENT}-comments-dynamodb`, {
+  ENVIRONMENT,
+});
 
-const transactionProcessor = new TransactionProcessor(
+new CommentsProcessor(
   app,
-  `vernforever-${ENVIRONMENT}-transaction-processor`,
-  { env, ENVIRONMENT }
-);
-
-const membershipProcessor = new MembershipProcessor(
-  app,
-  `vernforever-${ENVIRONMENT}-membership-processor`,
+  `interactivecomments-${ENVIRONMENT}-comments-processor`,
   {
     env,
     ENVIRONMENT,
   }
 );
-
-membershipProcessor.addDependency(transactionProcessor);
 
 app.synth();

@@ -3,7 +3,8 @@
   "extends": "../../../tsconfig.json",
   "compilerOptions": {
     "outDir": "./dist/",                                   /* Specify an output folder for all emitted files. */
+    "types": ["jest", "node"]
   },
   "include": ["src"],
-  "exclude": ["node_modules", "__tests__", "dist", "coverage"]
+  "exclude": ["node_modules", "dist", "coverage"]
 }
