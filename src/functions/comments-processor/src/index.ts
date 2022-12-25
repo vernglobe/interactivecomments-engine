@@ -3,7 +3,7 @@
 import Logger from "@vernglobe/logger";
 import aws from "@vernglobe/aws";
 import { APIGatewayEvent, APIGatewayProxyResult, Context } from "aws-lambda";
-import { CommentGroupType, CommentType } from "./custom-type";
+import { CommentType } from "./custom-type";
 
 const logger = new Logger("comments-processor");
 const commentsTbl = process.env.DYNAMODB_COMMENTS_TABLE;
