@@ -13,7 +13,7 @@ export default class DynamoTables extends Stack {
         tableProps: {
           tableName: `interactivecomments-${ENVIRONMENT}`,
           partitionKey: { name: "username", type: AttributeType.STRING },
-          sortKey: { name: "commentId", type: AttributeType.NUMBER },
+          sortKey: { name: "id", type: AttributeType.NUMBER },
           billingMode: BillingMode.PAY_PER_REQUEST,
         },
       },

@@ -93,6 +93,10 @@ export default class CommentsProcessor extends Stack {
     const getAllComments = userComment.addMethod("GET", getLambdaIntegration, {
       apiKeyRequired: true,
     });
+    // POST /comments
+    const addComments = userComment.addMethod("POST", getLambdaIntegration, {
+      apiKeyRequired: true,
+    });
 
     // GET /comments/{comment_id}
     // DELETE /comments/{comment_id}
@@ -124,6 +128,13 @@ export default class CommentsProcessor extends Stack {
       throttle: [
         {
           method: getAllComments,
+          throttle: {
+            rateLimit: 100,
+            burstLimit: 2,
+          },
+        },
+        {
+          method: addComments,
           throttle: {
             rateLimit: 100,
             burstLimit: 2,
