@@ -18,6 +18,7 @@ export default class Stack extends SuperStack {
       `stack:${id}`,
       ...(props ? props.contexts || [] : []),
     ];
+
     const context = contextNames.reduce((prev, contextName) => {
       const {
         accountContext,
