@@ -6,75 +6,6 @@ describe("test comments procesor", () => {
     jest.resetModules();
   });
 
-  const mockEventUser = {
-    resource: "/comments/{user_id}",
-    path: "/comments/yoda",
-    httpMethod: "GET",
-    headers: {
-      Accept: "*/*",
-      "Accept-Encoding": "gzip, deflate, br",
-      "Cache-Control": "no-cache",
-      "CloudFront-Forwarded-Proto": "https",
-      "CloudFront-Is-Desktop-Viewer": "true",
-      "CloudFront-Is-Mobile-Viewer": "false",
-      "CloudFront-Is-SmartTV-Viewer": "false",
-      "CloudFront-Is-Tablet-Viewer": "false",
-      "CloudFront-Viewer-ASN": "14618",
-      "CloudFront-Viewer-Country": "US",
-      Host: "pkg1tglr84.execute-api.ap-southeast-2.amazonaws.com",
-      "Postman-Token": "f2f9c7b4-03d6-49e0-949b-f934d3aef0e7",
-      "User-Agent": "PostmanRuntime/7.30.0",
-      Via: "1.1 5e1f849553b1d58615d0d8f7c044078e.cloudfront.net (CloudFront)",
-      "X-Amz-Cf-Id": "4OpAz-YLIB0rKNNjEkrtg3PBso7eMc0Wlcyf_wAB_v_dQ38AwcOxhg==",
-      "X-Amzn-Trace-Id": "Root=1-63a79fc6-29c5989357c7c14a4893d854",
-      "X-Api-Key": "tdIp2XRxCd8oLH9a5dIip5AzQ2BgrgQl8u1I9F5x",
-      "X-Forwarded-For": "54.86.50.139, 130.176.179.9",
-      "X-Forwarded-Port": "443",
-      "X-Forwarded-Proto": "https",
-    },
-    pathParameters: {
-      user_id: "yoda",
-    },
-    stageVariables: null,
-    body: null,
-    isBase64Encoded: false,
-  };
-
-  const mockEventComment = {
-    resource: "/comments/{user_id}/{comment_id}",
-    path: "/comments/yoda/2",
-    httpMethod: "GET",
-    headers: {
-      Accept: "*/*",
-      "Accept-Encoding": "gzip, deflate, br",
-      "Cache-Control": "no-cache",
-      "CloudFront-Forwarded-Proto": "https",
-      "CloudFront-Is-Desktop-Viewer": "true",
-      "CloudFront-Is-Mobile-Viewer": "false",
-      "CloudFront-Is-SmartTV-Viewer": "false",
-      "CloudFront-Is-Tablet-Viewer": "false",
-      "CloudFront-Viewer-ASN": "14618",
-      "CloudFront-Viewer-Country": "US",
-      Host: "pkg1tglr84.execute-api.ap-southeast-2.amazonaws.com",
-      "Postman-Token": "f2f9c7b4-03d6-49e0-949b-f934d3aef0e7",
-      "User-Agent": "PostmanRuntime/7.30.0",
-      Via: "1.1 5e1f849553b1d58615d0d8f7c044078e.cloudfront.net (CloudFront)",
-      "X-Amz-Cf-Id": "4OpAz-YLIB0rKNNjEkrtg3PBso7eMc0Wlcyf_wAB_v_dQ38AwcOxhg==",
-      "X-Amzn-Trace-Id": "Root=1-63a79fc6-29c5989357c7c14a4893d854",
-      "X-Api-Key": "tdIp2XRxCd8oLH9a5dIip5AzQ2BgrgQl8u1I9F5x",
-      "X-Forwarded-For": "54.86.50.139, 130.176.179.9",
-      "X-Forwarded-Port": "443",
-      "X-Forwarded-Proto": "https",
-    },
-    pathParameters: {
-      comment_id: "2",
-      user_id: "yoda",
-    },
-    stageVariables: null,
-    body: {},
-    isBase64Encoded: false,
-  };
-
   const commentData = [
     {
       content: "merry christmas",
@@ -127,7 +58,7 @@ describe("test comments procesor", () => {
     Count: 1,
   };
 
-  test("get all comments by username success", async () => {
+  test("get all comments by /{user_id} success", async () => {
     commentList.Items.forEach((comment: any) => {
       if (comment.replies !== undefined) {
         // eslint-disable-next-line no-param-reassign
@@ -138,47 +69,242 @@ describe("test comments procesor", () => {
     const mockAws = jest.fn().mockResolvedValueOnce(commentList);
     jest.mock("@vernglobe/aws", () => mockAws);
     const { handler } = require("../index");
-
-    const resp = await handler(mockEventUser);
+    const event = {
+      resource: "/comments/{user_id}",
+      path: "/comments/yoda",
+      httpMethod: "GET",
+      pathParameters: {
+        user_id: "yoda",
+      },
+    };
+    const resp = await handler(event);
     const { statusCode } = resp;
 
     expect(statusCode).toEqual(200);
   });
 
-  test("delete comment by commentId success", async () => {
-    const mockAws = jest.fn().mockResolvedValueOnce(commentList);
-    jest.mock("@vernglobe/aws", () => mockAws);
-    const { handler } = require("../index");
-    mockEventComment.httpMethod = "DELETE";
-    mockEventComment.body = JSON.stringify(mockEventComment.body);
-    const resp = await handler(mockEventComment);
-    const { statusCode } = resp;
-
-    expect(statusCode).toEqual(200);
-  });
-
-  test("update comment by commentId success", async () => {
-    const mockAws = jest.fn().mockResolvedValueOnce(commentList);
-    jest.mock("@vernglobe/aws", () => mockAws);
-    const { handler } = require("../index");
-    mockEventComment.httpMethod = "POST";
-    mockEventComment.body = JSON.stringify({
-      content: {},
-      score: 0,
-      replies: [],
+  test("get all comments without /{user_id} fail", async () => {
+    commentList.Items.forEach((comment: any) => {
+      if (comment.replies !== undefined) {
+        // eslint-disable-next-line no-param-reassign
+        comment.replies = JSON.stringify(comment);
+      }
     });
-    const resp = await handler(mockEventComment);
+
+    const mockAws = jest.fn().mockResolvedValueOnce(commentList);
+    jest.mock("@vernglobe/aws", () => mockAws);
+    const { handler } = require("../index");
+    const event = {
+      resource: "/comments/{user_id}",
+      path: "/comments/yoda",
+      httpMethod: "GET",
+      pathParameters: {},
+    };
+    const resp = await handler(event);
+    const { statusCode } = resp;
+
+    expect(statusCode).toEqual(400);
+  });
+
+  test("delete comment by /{user_id}/{comment_id} success", async () => {
+    const mockAws = jest.fn().mockResolvedValueOnce(commentList);
+    jest.mock("@vernglobe/aws", () => mockAws);
+    const { handler } = require("../index");
+    const event = {
+      resource: "/comments/{user_id}",
+      path: "/comments/yoda",
+      httpMethod: "DELETE",
+      pathParameters: {
+        user_id: "yoda",
+        comment_id: 1,
+      },
+    };
+    const resp = await handler(event);
+    const { statusCode } = resp;
+
+    expect(statusCode).toEqual(200);
+  });
+
+  test("delete comment without /{comment_id} fail", async () => {
+    const mockAws = jest.fn().mockResolvedValueOnce(commentList);
+    jest.mock("@vernglobe/aws", () => mockAws);
+    const { handler } = require("../index");
+    const event = {
+      resource: "/comments/{user_id}",
+      path: "/comments/yoda",
+      httpMethod: "DELETE",
+      pathParameters: {
+        user_id: "yoda",
+      },
+    };
+    const resp = await handler(event);
+    const { statusCode } = resp;
+
+    expect(statusCode).toEqual(400);
+  });
+
+  test("delete comment without /{user_id}/{comment_id} fail", async () => {
+    const mockAws = jest.fn().mockResolvedValueOnce(commentList);
+    jest.mock("@vernglobe/aws", () => mockAws);
+    const { handler } = require("../index");
+    const event = {
+      resource: "/comments/{user_id}",
+      path: "/comments/yoda",
+      httpMethod: "DELETE",
+      pathParameters: null,
+    };
+    const resp = await handler(event);
+    const { statusCode } = resp;
+
+    expect(statusCode).toEqual(400);
+  });
+
+  test("update comment by /{user_id}/{comment_id} success", async () => {
+    commentList.Items.forEach((comment: any) => {
+      if (comment.replies !== undefined) {
+        // eslint-disable-next-line no-param-reassign
+        comment.replies = JSON.stringify(comment);
+      }
+    });
+
+    const mockAws = jest.fn().mockResolvedValueOnce(commentList);
+    jest.mock("@vernglobe/aws", () => mockAws);
+    const { handler } = require("../index");
+    const event = {
+      resource: "/comments/{user_id}",
+      path: "/comments/yoda",
+      httpMethod: "POST",
+      pathParameters: {
+        user_id: "yoda",
+        comment_id: 5,
+      },
+      body: JSON.stringify({
+        content: {},
+        score: 0,
+        replies: [],
+      }),
+    };
+    const resp = await handler(event);
     const { statusCode } = resp;
     expect(statusCode).toEqual(200);
   });
 
-  test("get all comments by username and commentId success", async () => {
+  test("update comment without /{user_id}/{comment_id} fail", async () => {
+    const mockAws = jest.fn().mockResolvedValueOnce(commentList);
+    jest.mock("@vernglobe/aws", () => mockAws);
+    const { handler } = require("../index");
+    const event = {
+      resource: "/comments/{user_id}",
+      path: "/comments/yoda",
+      httpMethod: "POST",
+      pathParameters: null,
+      body: JSON.stringify({
+        content: {},
+        score: 0,
+        replies: [],
+      }),
+    };
+    const resp = await handler(event);
+    const { statusCode } = resp;
+    expect(statusCode).toEqual(400);
+  });
+
+  test("update comment by /{user_id}/{comment_id} and without body content fail", async () => {
+    const mockAws = jest.fn().mockResolvedValueOnce(commentList);
+    jest.mock("@vernglobe/aws", () => mockAws);
+    const { handler } = require("../index");
+    const event = {
+      resource: "/comments/{user_id}",
+      path: "/comments/yoda",
+      httpMethod: "POST",
+      pathParameters: {
+        user_id: "yoda",
+        comment_id: 90,
+      },
+      body: JSON.stringify({
+        score: 0,
+        replies: [],
+      }),
+    };
+    const resp = await handler(event);
+    const { statusCode } = resp;
+    expect(statusCode).toEqual(400);
+  });
+
+  test("add comment by /{user_id} success", async () => {
+    commentList.Items.forEach((comment: any) => {
+      if (comment.replies !== undefined) {
+        // eslint-disable-next-line no-param-reassign
+        comment.replies = JSON.stringify(comment);
+      }
+    });
+
+    const mockAws = jest.fn().mockResolvedValueOnce(commentList);
+    jest.mock("@vernglobe/aws", () => mockAws);
+    const { handler } = require("../index");
+    const event = {
+      resource: "/comments/{user_id}",
+      path: "/comments/yoda",
+      httpMethod: "POST",
+      pathParameters: {
+        user_id: "yoda",
+      },
+      body: JSON.stringify({
+        newComment: {},
+      }),
+    };
+    const resp = await handler(event);
+    const { statusCode } = resp;
+    expect(statusCode).toEqual(200);
+  });
+
+  test("add comment without /{user_id} fail", async () => {
+    commentList.Items.forEach((comment: any) => {
+      if (comment.replies !== undefined) {
+        // eslint-disable-next-line no-param-reassign
+        comment.replies = JSON.stringify(comment);
+      }
+    });
+
+    const mockAws = jest.fn().mockResolvedValueOnce(commentList);
+    jest.mock("@vernglobe/aws", () => mockAws);
+    const { handler } = require("../index");
+    const event = {
+      resource: "/comments/{user_id}",
+      path: "/comments/yoda",
+      httpMethod: "POST",
+      pathParameters: {},
+      body: JSON.stringify({
+        newComment: {},
+      }),
+    };
+    const resp = await handler(event);
+    const { statusCode } = resp;
+    expect(statusCode).toEqual(400);
+  });
+
+  test("get comment by /{user_id}/{comment_id} success", async () => {
+    commentList.Items.forEach((comment: any) => {
+      if (comment.replies !== undefined) {
+        // eslint-disable-next-line no-param-reassign
+        comment.replies = JSON.stringify(comment);
+      }
+    });
+
     const mockAws = jest.fn().mockResolvedValueOnce(commentList);
     jest.mock("@vernglobe/aws", () => mockAws);
 
     const { handler } = require("../index");
-
-    const resp = await handler(mockEventComment);
+    const event = {
+      resource: "/comments/{user_id}/{comment_id}",
+      path: "/comments/yoda/4",
+      httpMethod: "GET",
+      pathParameters: {
+        user_id: "siti",
+        comment_id: 4,
+      },
+    };
+    const resp = await handler(event);
     const { statusCode } = resp;
 
     expect(statusCode).toEqual(200);

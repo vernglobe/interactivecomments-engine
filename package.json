@@ -44,7 +44,6 @@
   },
   "jest": {
     "testPathIgnorePatterns": [
-      "<rootDir>/"
     ],
     "moduleFileExtensions": [
       "ts",
@@ -59,13 +58,13 @@
       }
     },
     "testMatch": [
-      "**/test/**/*.test.ts"
+      "**/__tests__/**/*.spec.ts"
     ],
     "coverageThreshold": {
       "./src/functions/**": {
-        "branches": 70,
-        "functions": 70,
-        "lines": 70
+        "branches": 80,
+        "functions": 80,
+        "lines": 80
       }
     }
   }
