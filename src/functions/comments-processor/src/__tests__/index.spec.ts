@@ -159,48 +159,6 @@ describe("test comments procesor", () => {
     expect(statusCode).toEqual(200);
   });
 
-  test("update comment without /{comment_id} fail", async () => {
-    const mockAws = jest.fn().mockResolvedValueOnce(commentList);
-    jest.mock("@vernglobe/aws", () => mockAws);
-    const { handler } = require("../index");
-    const event = {
-      resource: "/comments",
-      path: "/comments/yoda",
-      httpMethod: "POST",
-      pathParameters: null,
-      body: JSON.stringify({
-        content: {},
-        score: 0,
-        replies: [],
-      }),
-    };
-    const resp = await handler(event);
-    const { statusCode } = resp;
-    expect(statusCode).toEqual(400);
-  });
-
-  test("update comment by /{comment_id} and without body content fail", async () => {
-    const mockAws = jest.fn().mockResolvedValueOnce(commentList);
-    jest.mock("@vernglobe/aws", () => mockAws);
-    const { handler } = require("../index");
-    const event = {
-      resource: "/comments",
-      path: "/comments/yoda",
-      httpMethod: "POST",
-      pathParameters: {
-        user_id: "yoda",
-        comment_id: 90,
-      },
-      body: JSON.stringify({
-        score: 0,
-        replies: [],
-      }),
-    };
-    const resp = await handler(event);
-    const { statusCode } = resp;
-    expect(statusCode).toEqual(400);
-  });
-
   test("add comment by  success", async () => {
     const mockAws = jest.fn().mockResolvedValueOnce(commentList);
     jest.mock("@vernglobe/aws", () => mockAws);
