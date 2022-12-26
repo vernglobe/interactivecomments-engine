@@ -57,13 +57,6 @@ export default class CommentsProcessor extends Stack {
     const restApi = new RestApi(this, "interactivecomments", {
       restApiName: `interactivecomments-${ENVIRONMENT}`,
       description: "Create, read, update and delete comment",
-      // set up CORS
-      /* defaultCorsPreflightOptions: {
-        allowHeaders: ["Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"],
-        allowMethods: ["OPTIONS", "GET", "POST", "PUT", "DELETE", "HEAD", "PATCH"],
-        allowCredentials: true,
-        allowOrigins: ["http://localhost:3000"]
-      } */
     });
 
     const getLambdaIntegration = new LambdaIntegration(commentsProcessor, {
@@ -83,7 +76,7 @@ export default class CommentsProcessor extends Stack {
         "PATCH",
       ],
       allowCredentials: true,
-      allowOrigins: ["http://localhost:3000"],
+      allowOrigins: ["*"],
     };
 
     const comments = restApi.root.addResource("comments");
