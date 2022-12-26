@@ -6,13 +6,23 @@ describe("test comments procesor", () => {
     jest.resetModules();
   });
 
-  const commentData = [
+  const commentList = [
     {
-      content: "merry christmas",
-      commentId: 2,
-      image: {
-        png: "./images/avatars/yoda.png",
+      content:
+        "Woah, your project looks awesome! How long have you been coding for? I'm still new, but think I want to dive into Angular as well soon. Perhaps you can give me an insight on where I can learn Angular? Thanks!",
+      createdAt: "2022-05-14T13:49:51.141Z",
+      score: 9,
+      user: {
+        image: {
+          png: "./images/avatars/lukeskywalker.png",
+        },
+        username: "lukeskywalker",
       },
+      id: 3,
+    },
+    {
+      content:
+        "Woah, your project looks awesome! How long have you been coding for? I'm still new, but think I want to dive into Angular as well soon. Perhaps you can give me an insight on where I can learn Angular? Thanks!",
       createdAt: "2022-05-14T13:49:51.141Z",
       score: 5,
       user: {
@@ -21,97 +31,65 @@ describe("test comments procesor", () => {
         },
         username: "lukeskywalker",
       },
-      replies: [
-        {
-          createdAt: "2022-06-01T13:49:51.141Z",
-          score: 4,
-          id: 3,
-          replyingTo: "lukeskywalker",
-          user: {
-            image: {
-              png: "./images/avatars/vader.png",
-            },
-            username: "vader",
-          },
-          content: "me here",
+      id: 2,
+    },
+    {
+      content:
+        "Chillax, my Padawans. Much to learn, you have. The fundamentals of HTML, CSS, and JS, I'd recommend focusing on. It's very tempting to jump ahead but lay a solid foundation first. Everything moves so fast and it always seems like everyone knows the newest library/framework. But the fundamentals are what stays constant.",
+      replyingTo: "vader",
+      createdAt: "2022-06-02T13:49:51.141Z",
+      score: 2,
+      user: {
+        image: {
+          png: "./images/avatars/yoda.png",
         },
-        {
-          createdAt: "2022-06-02T13:49:51.141Z",
-          score: 2,
-          id: 4,
-          replyingTo: "vader",
-          user: {
-            image: {
-              png: "./images/avatars/yoda.png",
-            },
-            username: "yoda",
-          },
-          content: "yes i am",
+        username: "yoda",
+      },
+      parentId: 2,
+      id: 4,
+    },
+    {
+      content:
+        "Impressive! Though it seems the drag feature could be improved. But overall it looks incredible. You've nailed the design and the responsiveness at various breakpoints works really well.",
+      createdAt: "2022-04-10T13:49:51.141Z",
+      score: 12,
+      user: {
+        image: {
+          png: "./images/avatars/leiaskywalker.png",
         },
-      ],
-      username: "yoda",
+        username: "leiaskywalker",
+      },
+      id: 1,
     },
   ];
 
-  const commentList = {
-    Items: commentData,
-    Count: 1,
-  };
-
-  test("get all comments by /{user_id} success", async () => {
-    commentList.Items.forEach((comment: any) => {
-      if (comment.replies !== undefined) {
-        // eslint-disable-next-line no-param-reassign
-        comment.replies = JSON.stringify(comment);
-      }
+  test("get all comments success", async () => {
+    const mockAws = jest.fn().mockResolvedValueOnce({
+      Items: commentList,
     });
-
-    const mockAws = jest.fn().mockResolvedValueOnce(commentList);
     jest.mock("@vernglobe/aws", () => mockAws);
     const { handler } = require("../index");
     const event = {
-      resource: "/comments/{user_id}",
-      path: "/comments/yoda",
+      resource: "/comments",
+      path: "/comments",
       httpMethod: "GET",
       pathParameters: {
         user_id: "yoda",
       },
     };
     const resp = await handler(event);
+    console.log({resp});
     const { statusCode } = resp;
 
     expect(statusCode).toEqual(200);
   });
 
-  test("get all comments without /{user_id} fail", async () => {
-    commentList.Items.forEach((comment: any) => {
-      if (comment.replies !== undefined) {
-        // eslint-disable-next-line no-param-reassign
-        comment.replies = JSON.stringify(comment);
-      }
-    });
-
+  test("delete comment by /{comment_id} success", async () => {
     const mockAws = jest.fn().mockResolvedValueOnce(commentList);
     jest.mock("@vernglobe/aws", () => mockAws);
     const { handler } = require("../index");
     const event = {
-      resource: "/comments/{user_id}",
-      path: "/comments/yoda",
-      httpMethod: "GET",
-      pathParameters: {},
-    };
-    const resp = await handler(event);
-    const { statusCode } = resp;
-
-    expect(statusCode).toEqual(400);
-  });
-
-  test("delete comment by /{user_id}/{comment_id} success", async () => {
-    const mockAws = jest.fn().mockResolvedValueOnce(commentList);
-    jest.mock("@vernglobe/aws", () => mockAws);
-    const { handler } = require("../index");
-    const event = {
-      resource: "/comments/{user_id}",
+      resource: "/comments",
       path: "/comments/yoda",
       httpMethod: "DELETE",
       pathParameters: {
@@ -130,7 +108,7 @@ describe("test comments procesor", () => {
     jest.mock("@vernglobe/aws", () => mockAws);
     const { handler } = require("../index");
     const event = {
-      resource: "/comments/{user_id}",
+      resource: "/comments",
       path: "/comments/yoda",
       httpMethod: "DELETE",
       pathParameters: {
@@ -143,12 +121,12 @@ describe("test comments procesor", () => {
     expect(statusCode).toEqual(400);
   });
 
-  test("delete comment without /{user_id}/{comment_id} fail", async () => {
+  test("delete comment without /{comment_id} fail", async () => {
     const mockAws = jest.fn().mockResolvedValueOnce(commentList);
     jest.mock("@vernglobe/aws", () => mockAws);
     const { handler } = require("../index");
     const event = {
-      resource: "/comments/{user_id}",
+      resource: "/comments",
       path: "/comments/yoda",
       httpMethod: "DELETE",
       pathParameters: null,
@@ -159,19 +137,12 @@ describe("test comments procesor", () => {
     expect(statusCode).toEqual(400);
   });
 
-  test("update comment by /{user_id}/{comment_id} success", async () => {
-    commentList.Items.forEach((comment: any) => {
-      if (comment.replies !== undefined) {
-        // eslint-disable-next-line no-param-reassign
-        comment.replies = JSON.stringify(comment);
-      }
-    });
-
+  test("update comment by /{comment_id} success", async () => {
     const mockAws = jest.fn().mockResolvedValueOnce(commentList);
     jest.mock("@vernglobe/aws", () => mockAws);
     const { handler } = require("../index");
     const event = {
-      resource: "/comments/{user_id}",
+      resource: "/comments",
       path: "/comments/yoda",
       httpMethod: "POST",
       pathParameters: {
@@ -189,12 +160,12 @@ describe("test comments procesor", () => {
     expect(statusCode).toEqual(200);
   });
 
-  test("update comment without /{user_id}/{comment_id} fail", async () => {
+  test("update comment without /{comment_id} fail", async () => {
     const mockAws = jest.fn().mockResolvedValueOnce(commentList);
     jest.mock("@vernglobe/aws", () => mockAws);
     const { handler } = require("../index");
     const event = {
-      resource: "/comments/{user_id}",
+      resource: "/comments",
       path: "/comments/yoda",
       httpMethod: "POST",
       pathParameters: null,
@@ -209,12 +180,12 @@ describe("test comments procesor", () => {
     expect(statusCode).toEqual(400);
   });
 
-  test("update comment by /{user_id}/{comment_id} and without body content fail", async () => {
+  test("update comment by /{comment_id} and without body content fail", async () => {
     const mockAws = jest.fn().mockResolvedValueOnce(commentList);
     jest.mock("@vernglobe/aws", () => mockAws);
     const { handler } = require("../index");
     const event = {
-      resource: "/comments/{user_id}",
+      resource: "/comments",
       path: "/comments/yoda",
       httpMethod: "POST",
       pathParameters: {
@@ -231,19 +202,12 @@ describe("test comments procesor", () => {
     expect(statusCode).toEqual(400);
   });
 
-  test("add comment by /{user_id} success", async () => {
-    commentList.Items.forEach((comment: any) => {
-      if (comment.replies !== undefined) {
-        // eslint-disable-next-line no-param-reassign
-        comment.replies = JSON.stringify(comment);
-      }
-    });
-
+  test("add comment by  success", async () => {
     const mockAws = jest.fn().mockResolvedValueOnce(commentList);
     jest.mock("@vernglobe/aws", () => mockAws);
     const { handler } = require("../index");
     const event = {
-      resource: "/comments/{user_id}",
+      resource: "/comments",
       path: "/comments/yoda",
       httpMethod: "POST",
       pathParameters: {
@@ -258,46 +222,14 @@ describe("test comments procesor", () => {
     expect(statusCode).toEqual(200);
   });
 
-  test("add comment without /{user_id} fail", async () => {
-    commentList.Items.forEach((comment: any) => {
-      if (comment.replies !== undefined) {
-        // eslint-disable-next-line no-param-reassign
-        comment.replies = JSON.stringify(comment);
-      }
-    });
-
-    const mockAws = jest.fn().mockResolvedValueOnce(commentList);
-    jest.mock("@vernglobe/aws", () => mockAws);
-    const { handler } = require("../index");
-    const event = {
-      resource: "/comments/{user_id}",
-      path: "/comments/yoda",
-      httpMethod: "POST",
-      pathParameters: {},
-      body: JSON.stringify({
-        newComment: {},
-      }),
-    };
-    const resp = await handler(event);
-    const { statusCode } = resp;
-    expect(statusCode).toEqual(400);
-  });
-
-  test("get comment by /{user_id}/{comment_id} success", async () => {
-    commentList.Items.forEach((comment: any) => {
-      if (comment.replies !== undefined) {
-        // eslint-disable-next-line no-param-reassign
-        comment.replies = JSON.stringify(comment);
-      }
-    });
-
+  test("get comment by /{comment_id} success", async () => {
     const mockAws = jest.fn().mockResolvedValueOnce(commentList);
     jest.mock("@vernglobe/aws", () => mockAws);
 
     const { handler } = require("../index");
     const event = {
-      resource: "/comments/{user_id}/{comment_id}",
-      path: "/comments/yoda/4",
+      resource: "/comments/{comment_id}",
+      path: "/comments/4",
       httpMethod: "GET",
       pathParameters: {
         user_id: "siti",
@@ -312,19 +244,8 @@ describe("test comments procesor", () => {
 
   test("format comment as expected.", async () => {
     const { formatComments } = require("../index");
-    commentList.Items.forEach((comment: any) => {
-      if (comment.replies !== undefined) {
-        // eslint-disable-next-line no-param-reassign
-        comment.replies = JSON.stringify(comment);
-      }
-    });
     const resp = await formatComments(commentList);
-    expect(resp).toEqual({
-      currentUser: {
-        image: commentData[0].image,
-        username: commentData[0].username,
-      },
-      comments: commentData,
-    });
+
+    expect(resp.length).toEqual(3);
   });
 });

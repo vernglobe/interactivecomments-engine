@@ -14,6 +14,9 @@ type PathParametersType = {
   comment_id?: number;
 };
 
+const ERR_MSG_MISSING_COMMENT_ID =
+  "Please specify the value for path parameter {comment_id}.";
+
 const validateRequestParams = (event: APIGatewayEvent): any => {
   const { pathParameters, body, httpMethod } = event;
 
@@ -24,80 +27,58 @@ const validateRequestParams = (event: APIGatewayEvent): any => {
     body,
   };
 
-  if (pathParameters?.user_id === undefined) {
+  if (["DELETE"].includes(httpMethod) && !pathParameters?.comment_id) {
     response.statusCode = 400;
-    response.body = "Please specify the value for path parameter {user_id}.";
-    return response;
-  }
-
-  if (httpMethod === "DELETE" && pathParameters.comment_id === undefined) {
-    response.statusCode = 400;
-    response.body = "Please specify the value for path parameter {comment_id}.";
+    response.body = ERR_MSG_MISSING_COMMENT_ID;
     return response;
   }
 
   if (httpMethod === "POST") {
-    if (
-      (pathParameters.comment_id !== undefined &&
-        (requestBody === null ||
-          requestBody.content === undefined ||
-          requestBody.score === undefined ||
-          requestBody.replies === undefined)) ||
-      (pathParameters.comment_id === undefined &&
-        requestBody.newComment === undefined)
-    ) {
-      response.statusCode = 400;
-      response.body = "Please specify check the parameter and body content.";
-      return response;
-    }
     response.content = requestBody.content;
     response.score = requestBody.score;
-    response.replies = requestBody.replies;
     response.newComment = requestBody.newComment;
+    response.parentId = requestBody.parentId;
   }
 
   response.pathParameters = pathParameters;
   return response;
 };
 
-const formatComments = (commentList: any): any => {
+const formatComments = (commentList: Array<any>): any => {
   logger.debug({ commentList });
-  const { Items, Count } = commentList;
-  if (Count <= 0) {
+  if (commentList.length <= 0) {
     return "Content empty.";
   }
-  const currentUser = {
-    image: Items[0].image,
-    username: Items[0].username,
-  };
-  Items.forEach((item: any) => {
-    if (item.replies !== undefined || item.replies !== "[]") {
-      // eslint-disable-next-line no-param-reassign
-      item.replies = JSON.parse(item.replies);
-    }
+
+  const parentComment = commentList.filter(
+    (comment) => comment.parentId === undefined
+  );
+
+  // eslint-disable-next-line array-callback-return
+  parentComment.map((parent) => {
     // eslint-disable-next-line no-param-reassign
-    delete item.username;
-    // eslint-disable-next-line no-param-reassign
-    delete item.image;
+    parent.replies = commentList.filter(
+      (comment) => comment.parentId === parent.id
+    );
   });
 
-  return {
-    currentUser,
-    comments: Items,
-  };
+  logger.debug({ parentComment });
+  return parentComment;
 };
 
-const getAllComments = async (userId: string): Promise<string> => {
+const getAllComments = async (): Promise<string> => {
   try {
-    const commentList = await aws(DYNAMODB_DOC_CLIENT, "query", {
-      TableName: commentsTbl,
-      KeyConditionExpression: "username = :username",
-      ExpressionAttributeValues: {
-        ":username": `${userId}`,
-      },
-      Limit: 1000,
-    });
-    return formatComments(commentList);
+    const scanResults: any = [];
+    let items;
+    do {
+      // eslint-disable-next-line no-await-in-loop
+      items = await aws(DYNAMODB_DOC_CLIENT, "scan", {
+        TableName: commentsTbl,
+      });
+      items.Items.forEach((item: any) => scanResults.push(item));
+    } while (typeof items.LastEvaluatedKey !== "undefined");
+
+    return formatComments(scanResults);
   } catch (err) {
     logger.error({ err });
     return Promise.reject(err);
@@ -105,29 +86,37 @@ const getAllComments = async (userId: string): Promise<string> => {
 };
 
 const updateComments = async (
-  userId: string,
   id: number,
+  parentId: number,
   content: string,
-  score: number,
-  replies: Array<CommentType>
+  score: number
 ): Promise<string> => {
-  const isUpdated = false;
+  let conditionExpr = "id = :id";
+  let exprAttrValues: any = {
+    ":content": `${content}`,
+    ":score": Number(score),
+    ":id": Number(id),
+  };
+
+  if (parentId !== undefined) {
+    conditionExpr = "id = :id and parentId = :parentId";
+    exprAttrValues = {
+      ":content": `${content}`,
+      ":score": Number(score),
+      ":id": Number(id),
+      ":parentId": Number(parentId),
+    };
+  }
+
   try {
     const resp = await aws(DYNAMODB_DOC_CLIENT, "update", {
       TableName: commentsTbl,
       Key: {
-        username: userId,
         id: Number(id),
       },
-      UpdateExpression:
-        "set content = :content, replies = :replies, score = :score",
+      UpdateExpression: "set content = :content, score = :score",
       ConditionExpression: "id = :id",
-      ExpressionAttributeValues: {
-        ":content": `${content}`,
-        ":replies": `${JSON.stringify(replies)}`,
-        ":score": Number(score),
-        ":id": Number(id),
-      },
+      ExpressionAttributeValues: exprAttrValues,
     });
     logger.debug({ resp });
     return "Update successfully!";
@@ -137,12 +126,15 @@ const updateComments = async (
   }
 };
 
-const addComment = async (newComment: any): Promise<string> => {
-  const replyString = JSON.stringify(newComment.replies);
-  // eslint-disable-next-line no-param-reassign
-  delete newComment.replies;
-  // eslint-disable-next-line no-param-reassign
-  newComment.replies = replyString;
+const addComment = async (
+  newComment: any,
+  parentId: number | undefined
+): Promise<string> => {
+  if (parentId) {
+    // eslint-disable-next-line no-param-reassign
+    newComment.parentId = parentId;
+  }
+
   try {
     const commentList = await aws(DYNAMODB_DOC_CLIENT, "put", {
       TableName: commentsTbl,
@@ -155,12 +147,11 @@ const addComment = async (newComment: any): Promise<string> => {
   }
 };
 
-const deleteComment = async (userId: string, id: number): Promise<string> => {
+const deleteComment = async (id: number): Promise<string> => {
   try {
     const commentList = await aws(DYNAMODB_DOC_CLIENT, "delete", {
       TableName: commentsTbl,
       Key: {
-        username: userId,
         id: Number(id),
       },
     });
@@ -171,17 +162,68 @@ const deleteComment = async (userId: string, id: number): Promise<string> => {
   }
 };
 
-const getCommentById = async (userId: string, id: number): Promise<string> => {
+const getRepliesByParentId = async (parentId: number): Promise<string> => {
   try {
-    const commentList = await aws(DYNAMODB_DOC_CLIENT, "query", {
+    logger.debug("getRepliesByParentId");
+    const replies: any = [];
+    const parameters: any = {
       TableName: commentsTbl,
-      KeyConditionExpression: "username = :username and id = :id",
+      IndexName: "replyto-parent-index",
+      KeyConditionExpression: "parentId = :parentId",
       ExpressionAttributeValues: {
-        ":username": `${userId}`,
+        ":parentId": Number(parentId),
+      },
+    };
+
+    let data: any = { LastEvaluatedKey: true };
+    while (typeof data.LastEvaluatedKey !== "undefined") {
+      // eslint-disable-next-line no-await-in-loop
+      data = await aws(DYNAMODB_DOC_CLIENT, "query", parameters);
+      logger.debug({ data });
+      if (
+        data === undefined ||
+        data?.Items === undefined ||
+        data?.Items.length === 0
+      ) {
+        break;
+      }
+      parameters.ExclusiveStartKey = data.LastEvaluatedKey;
+      replies.push(...data.Items);
+    }
+
+    logger.debug({ replies });
+
+    return replies;
+  } catch (err) {
+    console.log({ err });
+    logger.error({ err });
+    return Promise.reject(err);
+  }
+};
+
+const getCommentById = async (id: number): Promise<string> => {
+  try {
+    const commentList: any = [];
+    const items = await aws(DYNAMODB_DOC_CLIENT, "query", {
+      TableName: commentsTbl,
+      KeyConditionExpression: "id = :id",
+      ExpressionAttributeValues: {
         ":id": Number(id),
       },
       Limit: 1000,
     });
+    logger.debug({ items });
+    const [Items, Count] = items;
+    logger.debug(`getcomment by id count:${Count}`);
+    if (Count > 0) {
+      const parentComment = Items[0];
+      const replies = await getRepliesByParentId(id);
+      if (replies.length > 0) {
+        parentComment.replies = replies;
+      }
+      commentList.push(parentComment);
+    }
+
     return formatComments(commentList);
   } catch (err) {
     logger.error({ err });
@@ -189,14 +231,13 @@ const getCommentById = async (userId: string, id: number): Promise<string> => {
   }
 };
 
-const retrieveComments = async (param: PathParametersType) => {
+const retrieveComments = async (commentId: number | undefined) => {
   let resp = null;
-  if (param.user_id !== undefined) {
-    if (param.comment_id !== undefined) {
-      resp = await getCommentById(param.user_id, param.comment_id);
-    } else {
-      resp = await getAllComments(param.user_id);
-    }
+
+  if (commentId) {
+    resp = await getCommentById(commentId);
+  } else {
+    resp = await getAllComments();
   }
 
   return resp;
@@ -225,22 +266,26 @@ exports.handler = async (
     return validateReq;
   }
 
-  const { user_id: userId, comment_id: id } = validateReq.pathParameters;
-  const { content, score, replies, newComment } = validateReq;
+  const { content, score, replies, newComment, parentId } = validateReq;
   try {
     switch (event.httpMethod) {
       case "GET":
-        body = await retrieveComments(validateReq.pathParameters);
+        body = await retrieveComments(validateReq.pathParameters?.comment_id);
         break;
       case "POST":
-        if (id !== undefined) {
-          body = await updateComments(userId, id, content, score, replies);
+        if (validateReq.pathParameters?.comment_id) {
+          body = await updateComments(
+            validateReq.pathParameters?.comment_id,
+            parentId,
+            content,
+            score
+          );
         } else {
-          body = await addComment(newComment);
+          body = await addComment(newComment, parentId);
         }
         break;
       case "DELETE":
-        body = await deleteComment(userId, id);
+        body = await deleteComment(validateReq.pathParameters?.comment_id);
         break;
       default:
         throw Error(`Unsupported method "${event.httpMethod}"`);

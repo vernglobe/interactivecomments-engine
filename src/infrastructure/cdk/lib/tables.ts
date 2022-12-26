@@ -12,14 +12,24 @@ export default class DynamoTables extends Stack {
         logicalId: "interactiveCommentsTable",
         tableProps: {
           tableName: `interactivecomments-${ENVIRONMENT}`,
-          partitionKey: { name: "username", type: AttributeType.STRING },
-          sortKey: { name: "id", type: AttributeType.NUMBER },
+          partitionKey: { name: "id", type: AttributeType.NUMBER },
           billingMode: BillingMode.PAY_PER_REQUEST,
         },
+        globalSecondaryIndexList: [
+          {
+            indexName: "replyto-parent-index",
+            partitionKey: { name: "parentId", type: AttributeType.NUMBER },
+          },
+        ],
       },
     ];
-    tablesProperties.forEach(({ logicalId, tableProps }) => {
-      const table = new Table(this, logicalId, tableProps);
-    });
+    tablesProperties.forEach(
+      ({ logicalId, tableProps, globalSecondaryIndexList = [] }) => {
+        const table = new Table(this, logicalId, tableProps);
+        globalSecondaryIndexList.forEach((index) => {
+          table.addGlobalSecondaryIndex(index);
+        });
+      }
+    );
   }
 }

@@ -69,9 +69,7 @@ export default class CommentsProcessor extends Stack {
     const getLambdaIntegration = new LambdaIntegration(commentsProcessor, {
       requestTemplates: { "application/json": '{"statusCode": "200"}' },
     });
-
-    const comments = restApi.root.addResource("comments");
-    comments.addCorsPreflight({
+    const corsPreflight = {
       allowHeaders: [
         "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
       ],
@@ -86,22 +84,25 @@ export default class CommentsProcessor extends Stack {
       ],
       allowCredentials: true,
       allowOrigins: ["http://localhost:3000"],
-    });
+    };
 
-    const userComment = comments.addResource("{user_id}");
+    const comments = restApi.root.addResource("comments");
+    comments.addCorsPreflight(corsPreflight);
+
     // GET /comments
-    const getAllComments = userComment.addMethod("GET", getLambdaIntegration, {
+    // POST /comments
+    const getAllComments = comments.addMethod("GET", getLambdaIntegration, {
       apiKeyRequired: true,
     });
-    // POST /comments
-    const addComments = userComment.addMethod("POST", getLambdaIntegration, {
+    const addComments = comments.addMethod("POST", getLambdaIntegration, {
       apiKeyRequired: true,
     });
 
     // GET /comments/{comment_id}
     // DELETE /comments/{comment_id}
     // POST /comments/{comment_id}
-    const commentId = userComment.addResource("{comment_id}");
+    const commentId = comments.addResource("{comment_id}");
+    commentId.addCorsPreflight(corsPreflight);
     const getComment = commentId.addMethod("GET", getLambdaIntegration, {
       apiKeyRequired: true,
     });
