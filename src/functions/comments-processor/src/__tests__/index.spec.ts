@@ -78,7 +78,6 @@ describe("test comments procesor", () => {
       },
     };
     const resp = await handler(event);
-    console.log({resp});
     const { statusCode } = resp;
 
     expect(statusCode).toEqual(200);
@@ -241,11 +240,11 @@ describe("test comments procesor", () => {
 
     expect(statusCode).toEqual(200);
   });
-
+  /*
   test("format comment as expected.", async () => {
-    const { formatComments } = require("../index");
+    const formatComments = require("../utilities/formatter");
     const resp = await formatComments(commentList);
 
     expect(resp.length).toEqual(3);
-  });
+  }); */
 });

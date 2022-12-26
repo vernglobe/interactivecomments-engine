@@ -29,4 +29,3 @@ export type CommentGroupType = {
   currentUser?: boolean;
   replies?: Array<CommentType>;
 };
-
